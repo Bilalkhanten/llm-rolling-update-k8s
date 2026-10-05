@@ -1,0 +1,11 @@
+# PDBs do NOT throttle Deployment rolling updates. They protect you from *evictions*:
+# node drains, cluster-autoscaler scale-downs, GKE/EKS node upgrades.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: llm
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: llm

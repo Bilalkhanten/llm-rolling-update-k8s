@@ -1,0 +1,21 @@
+# Runs INSIDE the cluster on purpose: `kubectl port-forward svc/llm` pins ONE pod
+# and would make every rollout look broken (or perfect) for the wrong reasons.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadgen
+  template:
+    metadata:
+      labels:
+        app: loadgen
+    spec:
+      containers:
+        - name: loadgen
+          image: fake-llm:lab
+          imagePullPolicy: IfNotPresent
+          command: ["python", "/app/loadgen.py", "--url", "http://llm", "--concurrency", "6", "--report", "10"]

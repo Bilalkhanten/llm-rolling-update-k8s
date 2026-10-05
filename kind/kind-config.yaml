@@ -1,0 +1,11 @@
+# 1 control-plane + 4 workers. Only 3 workers get a (fake) GPU at first;
+# the 4th one is "the spare GPU node" we add later for the placeholder experiment.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: llm-lab
+nodes:
+  - role: control-plane
+  - role: worker
+  - role: worker
+  - role: worker
+  - role: worker

@@ -1,0 +1,30 @@
+Running 4 scenarios in parallel (~2 minutes)...
+
+[A] +  0.0s  pod marked Terminating (grace=30s, preStop=0s, server=graceful)
+[A] +  0.0s  SIGTERM sent
+[A] + 30.0s  grace period (30s) expired -> SIGKILL
+[A] + 30.0s  in-flight answers: 2 complete, 2 cut off 
+
+[B] +  0.0s  pod marked Terminating (grace=90s, preStop=0s, server=graceful)
+[B] +  0.0s  SIGTERM sent
+[B] + 51.3s  process exited by itself (status -15)
+[B] + 51.3s  in-flight answers: 4 complete, 0 cut off 
+
+[C] +  0.0s  pod marked Terminating (grace=90s, preStop=10s, server=graceful)
+[C] + 10.0s  preStop finished after 10s
+[C] + 10.0s  SIGTERM sent
+[C] + 51.2s  process exited by itself (status -15)
+[C] + 51.2s  in-flight answers: 4 complete, 0 cut off 
+
+[D] +  0.0s  pod marked Terminating (grace=90s, preStop=10s, server=abrupt)
+[D] + 10.0s  preStop finished after 10s
+[D] + 10.0s  SIGTERM sent
+[D] + 10.2s  process exited by itself (status 143)
+[D] + 10.2s  in-flight answers: 0 complete, 4 cut off 
+
+  scenario                                                                     complete  cut off  new req ok  refused
+---------------------------------------------------------------------------------------------------------------------
+A defaults: 30s grace, no preStop                                                     2        2           1        5
+B 90s grace, no preStop                                                               4        0           1        5
+C 90s grace + 10s preStop                                                             4        0           6        0
+D 90s grace + 10s preStop, but the server exits on SIGTERM without draining           0        4           6        0

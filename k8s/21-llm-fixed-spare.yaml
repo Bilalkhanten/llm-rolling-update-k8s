@@ -1,0 +1,66 @@
+# Fixed, for clusters where a spare GPU exists (real node, or a preemptible placeholder):
+# surge one extra replica first, so serving capacity never drops below 3/3.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm
+  labels:
+    app: llm
+spec:
+  replicas: 3
+  # Must exceed the WORST-case time to first Ready (new node + image pull + weights + load).
+  # The default (600s) is often too short for big models.
+  progressDeadlineSeconds: 900
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1            # a 4th GPU must exist (see 30-placeholder.yaml)
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: llm
+  template:
+    metadata:
+      labels:
+        app: llm
+    spec:
+      # The grace period clock includes preStop:
+      #   10s preStop + up to 60s longest answer + 20s slack = 90s
+      terminationGracePeriodSeconds: 90
+      containers:
+        - name: server
+          image: fake-llm:lab
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODEL_VERSION
+              value: v1
+            - name: LOAD_SECONDS
+              value: "45"
+          resources:
+            limits:
+              nvidia.com/gpu: 1
+          # 1) "Is the model loaded yet?"  Gives loading a budget of 60 x 5s = 5 minutes.
+          #    Liveness and readiness probes do not run until this succeeds.
+          startupProbe:
+            httpGet: { path: /readyz, port: 8000 }
+            periodSeconds: 5
+            failureThreshold: 60
+          # 2) "Should traffic come here?"  Fails fast when the pod starts draining.
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8000 }
+            periodSeconds: 5
+            failureThreshold: 1
+          # 3) "Is the process wedged?"  Deliberately NOT the same endpoint as readiness.
+          livenessProbe:
+            httpGet: { path: /livez, port: 8000 }
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              # Keep serving while endpoints/proxies catch up, THEN let SIGTERM arrive.
+              # (Kubernetes 1.30+ also has a native `sleep` action if your image has no sleep binary.)
+              exec:
+                command: ["sleep", "10"]

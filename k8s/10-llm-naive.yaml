@@ -1,0 +1,41 @@
+# The Deployment as most of us write it the first time: it is a web app, right?
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm
+  labels:
+    app: llm
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: llm
+  # strategy:                -> not set: RollingUpdate, maxSurge 25% (=1), maxUnavailable 25% (=0)
+  # progressDeadlineSeconds: -> not set: 600
+  template:
+    metadata:
+      labels:
+        app: llm
+    spec:
+      # terminationGracePeriodSeconds: -> not set: 30
+      containers:
+        - name: server
+          image: fake-llm:lab
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: MODEL_VERSION
+              value: v1
+            - name: LOAD_SECONDS
+              value: "45"
+          resources:
+            limits:
+              nvidia.com/gpu: 1        # one whole GPU per replica
+          readinessProbe:
+            httpGet: { path: /readyz, port: 8000 }
+            periodSeconds: 5
+          livenessProbe:
+            httpGet: { path: /livez, port: 8000 }
+            periodSeconds: 10
+          # no startupProbe, no preStop hook

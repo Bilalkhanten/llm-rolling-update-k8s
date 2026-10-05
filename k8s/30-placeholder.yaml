@@ -1,0 +1,35 @@
+# "Overprovisioning" placeholder: a pod that does nothing except hold a spare GPU.
+# Real pods have priority 0, so the scheduler PREEMPTS this one the moment a rollout
+# needs the surge GPU. (On an autoscaled cluster the evicted placeholder goes Pending,
+# which is exactly what makes the autoscaler add the next spare node.)
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: gpu-placeholder
+value: -10
+globalDefault: false
+preemptionPolicy: Never
+description: "Reserved GPU headroom - always preemptible by real workloads."
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gpu-placeholder
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gpu-placeholder
+  template:
+    metadata:
+      labels:
+        app: gpu-placeholder
+    spec:
+      priorityClassName: gpu-placeholder
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            limits:
+              nvidia.com/gpu: 1
