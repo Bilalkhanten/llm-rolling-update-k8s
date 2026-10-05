@@ -1,4 +1,4 @@
-# llm-rollout-lab
+# llm-rolling-update-k8s
 
 Companion repo for the article **"Why Does My LLM Rolling Update Hang at '1 out of 3 New Replicas'?"**
 
